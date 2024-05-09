@@ -1,12 +1,9 @@
 """
-This code implements the stochastic K-sparse-OT-dash algorithm with
-sparse representations ie. gamma and its gradient are of size |S|
-where S is the tensor containing support points. 
+This code implements the (stochastic) GenSparse UOT algorithm with
+sparse representations ie. gamma and its gradient are of size K. 
 
-Here K is auto-chosen.
-
-- get_gamma: Returns the sparse OT plan gamma of dimension K x 1.
-
+Elements are added until there is a positive marginal gain 
+(equivalently computed in terms of gradients).
 """
 
 import torch
@@ -99,7 +96,8 @@ def get_gamma_dash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts, 
 
     tmp_idx = torch.zeros(max(m, n), dtype=torch.long, device=device)  # to avoid memory leak
     aranged = torch.arange(max(m, n), device=device)
-    gamma0 = torch.zeros(tot, dtype=fixed_grd.dtype, device=device)  # initial gamma for APGD
+    gamma0 = torch.zeros(tot, dtype=fixed_grd.dtype,
+                         device=device)  # initial gamma for APGD
     
     gammas = []
     gamma = None
@@ -161,10 +159,12 @@ def get_gamma_dash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts, 
         unq_j = torch.unique(S_j_S)
         G1_ss = G1[unq_i, :][:, unq_i]
         G2_ss = G2[unq_j, :][:, unq_j]
+        
         m1, m2 = len(unq_i), len(unq_j)
         L_orig = m2**2*norm(G1_ss)**2 + m1**2*norm(G2_ss)**2 + 2*(torch.sum(G1_ss)*torch.sum(G2_ss))
         L = 2*sqrt(lda**2*L_orig + lda3**2*m1*m2 + 2*lda*lda3*(m2*torch.trace(G1_ss) + m1*torch.trace(G2_ss))) if lda3 else 2*lda*sqrt(L_orig)
         ss = 1/L
+
         # *** solve UOT-MMD ***
         G1_u = G1[unq_i]
         G2_u = G2[unq_j]
@@ -244,7 +244,8 @@ def get_gamma_sdash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts,
 
     tmp_idx = torch.zeros(max(m, n), dtype=torch.long, device=device)  # to avoid memory leak
     aranged = torch.arange(max(m, n), device=device)
-    gamma0 = torch.zeros(tot, dtype=fixed_grd.dtype, device=device)  # initial gamma for APGD
+    gamma0 = torch.zeros(tot, dtype=fixed_grd.dtype,
+                         device=device)  # initial gamma for APGD
 
     gammas = []
     gamma = gamma0[:1].clone()
@@ -258,7 +259,7 @@ def get_gamma_sdash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts,
         if k:
             S_i_R = torch.div(R, n, rounding_mode='floor')
             S_j_R = R % n
-            
+
             unq_i_R = torch.unique(S_i_R)
             unq_j_R = torch.unique(S_j_R)
             gamma1, gammaT1 = get_marginals(gamma, S_i[:k], S_j[:k], m, n)
@@ -392,9 +393,8 @@ def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpart
     aranged = torch.arange(max(m, n), device=device)
 
     dummy_zero = torch.tensor([0], dtype=fixed_grd.dtype, device=device)
-    gamma = dummy_zero.clone()
-    
     gammas = []
+    gamma = dummy_zero.clone()
 
     vec_grd = fixed_grd.flatten()
     u_0 = torch.argmin(vec_grd)
@@ -413,9 +413,9 @@ def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpart
             # R: V_minus_L
             S_i_R = torch.div(V_minus_L, n, rounding_mode='floor')
             S_j_R = V_minus_L % n
-            
-            unq_i_R = torch.unique(S_i_R)
-            unq_j_R = torch.unique(S_j_R)
+
+            unq_i_R = torch.unique(S_i_R)  # unique i indices of the remaining
+            unq_j_R = torch.unique(S_j_R)  # unique j indices of the remaining
             gamma1, gammaT1 = get_marginals(gamma, S_i[:k], S_j[:k], m, n)
             r2 = torch.mv(G1[unq_i_R], gamma1)
             c2 = torch.mv(G2[unq_j_R], gammaT1)
@@ -455,11 +455,13 @@ def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpart
         L_orig = m2**2*norm(G1_ss)**2 + m1**2*norm(G2_ss)**2 + 2*(torch.sum(G1_ss)*torch.sum(G2_ss))
         L = 2*sqrt(lda**2*L_orig + lda3**2*m1*m2 + 2*lda*lda3*(m2*torch.trace(G1_ss) + m1*torch.trace(G2_ss))) if lda3 else 2*lda*sqrt(L_orig)
         ss = 1/L
+        
         # *** solve UOT-MMD ***
         G1_u = G1[unq_i]
         G2_u = G2[unq_j]
 
         fixed_grd_S = fixed_grd[S_i_S, S_j_S]
+
         # for mapping from unique indices' based order to chosen indices' based order
         idx_in_r2 = tmp_idx.clone()
         idx_in_r2[unq_i] = aranged[:unq_i.shape[0]]
@@ -472,11 +474,10 @@ def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpart
         y1, yT1 = get_marginals(y, S_i_S, S_j_S, m, n)
         r2 = torch.mv(G1_u, y1)
         c2 = torch.mv(G2_u, yT1)
-        grd = fixed_grd_S + 2*lda*(r2[idx_i] + c2[idx_j])
+        grd = fixed_grd_S + 2*lda*(r2[idx_i] + c2[idx_j]) + lda3*y
 
         x_old = y.clone()
         t = 1
-
         if  verbose:
             obj = get_obj(C, G1, G2, v1, v2, y, S_i_S, S_j_S, lda, vparts).item()
             all_obj[k].append(obj)
@@ -493,7 +494,6 @@ def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpart
             r2 = torch.mv(G1_u, y1)
             c2 = torch.mv(G2_u, yT1)
             grd = fixed_grd_S + 2*lda*(r2[idx_i] + c2[idx_j]) + lda3*gamma
-
             pos_ind = torch.where(gamma>0)[0]
             index_0 = torch.where(gamma==0)[0]
             nrm = norm(grd[pos_ind])
@@ -517,6 +517,7 @@ def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpart
         return gammas if all_gamma else gamma, S_i_S, S_j_S, all_obj, all_nrm
     return gammas if all_gamma else gamma, S_i_S, S_j_S
 
+
 def get_gamma_sdash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts, verbose, conv_crit, s, seed, tol):
     """
     Implements Stochastic Sparse-OT-Dash algorithm with warm-start.
@@ -538,7 +539,6 @@ def get_gamma_sdash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpar
 
     tmp_idx = torch.zeros(max(m, n), dtype=torch.long, device=device)  # to avoid memory leak
     aranged = torch.arange(max(m, n), device=device)
-
     dummy_zero = torch.tensor([0], dtype=fixed_grd.dtype, device=device)
     gammas = []
     gamma = dummy_zero.clone()
@@ -553,8 +553,8 @@ def get_gamma_sdash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpar
             S_i_R = torch.div(R, n, rounding_mode='floor')
             S_j_R = R % n
 
-            unq_i_R = torch.unique(S_i_R)
-            unq_j_R = torch.unique(S_j_R)
+            unq_i_R = torch.unique(S_i_R)  # unique i indices of the remaining
+            unq_j_R = torch.unique(S_j_R)  # unique j indices of the remaining
             gamma1, gammaT1 = get_marginals(gamma, S_i[:k], S_j[:k], m, n)
             r2 = torch.mv(G1[unq_i_R], gamma1)
             c2 = torch.mv(G2[unq_j_R], gammaT1)
@@ -564,7 +564,7 @@ def get_gamma_sdash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpar
             idx_in_r2[unq_i_R] = aranged[:unq_i_R.shape[0]]
             idx_in_c2 = tmp_idx.clone()
             idx_in_c2[unq_j_R] = aranged[:unq_j_R.shape[0]]
-
+            
             vec_grd = fixed_grd[S_i_R, S_j_R] + 2*lda*(r2[idx_in_r2[S_i_R]] +
                                                        c2[idx_in_c2[S_j_R]])
             if lda3:
@@ -588,13 +588,14 @@ def get_gamma_sdash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpar
         S_j[k] = chosen % n
 
         S_i_S = S_i[:k+1]
-        S_j_S = S_j[:k+1]        
+        S_j_S = S_j[:k+1]
 
         # update the remaining elements
         index = torch.where(V_minus_L != chosen)[0]
         V_minus_L = V_minus_L[index]
         # NOTE: u_0 is chosen from R so we need to infer its index first.
 
+        # get step-size based on the support points
         # upd unique, upd ss
         unq_i = torch.unique(S_i_S)
         unq_j = torch.unique(S_j_S)
@@ -604,12 +605,13 @@ def get_gamma_sdash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpar
         L_orig = m2**2*norm(G1_ss)**2 + m1**2*norm(G2_ss)**2 + 2*(torch.sum(G1_ss)*torch.sum(G2_ss))
         L = 2*sqrt(lda**2*L_orig + lda3**2*m1*m2 + 2*lda*lda3*(m2*torch.trace(G1_ss) + m1*torch.trace(G2_ss))) if lda3 else 2*lda*sqrt(L_orig)
         ss = 1/L
-        
+
         # *** solve UOT-MMD ***
         G1_u = G1[unq_i]
         G2_u = G2[unq_j]
-        
+
         fixed_grd_S = fixed_grd[S_i_S, S_j_S]
+
         # for mapping from unique indices' based order to chosen indices' based order
         idx_in_r2 = tmp_idx.clone()
         idx_in_r2[unq_i] = aranged[:unq_i.shape[0]]

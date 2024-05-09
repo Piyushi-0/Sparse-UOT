@@ -1,10 +1,6 @@
 """
-This code implements the stochastic K-sparse-OT-dash algorithm with
-sparse representations ie. gamma and its gradient are of size |S|
-where S is the tensor containing support points.
-
-- get_gamma: Returns the sparse OT plan gamma of dimension K x 1.
-
+This code implements the (stochastic) GenSparse UOT algorithm with
+sparse representations ie. gamma and its gradient are of size K. 
 """
 
 import torch
@@ -108,8 +104,8 @@ def get_gamma_dash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts, 
         all_nrm[k] = []
         if k:
             # R: V_minus_L
-            S_i_R = torch.div(V_minus_L, n, rounding_mode='floor')
-            S_j_R = V_minus_L % n
+            S_i_R = torch.div(V_minus_L, n, rounding_mode='floor')  # i indices of the remaining
+            S_j_R = V_minus_L % n  # j indices of the remaining
 
             unq_i_R = torch.unique(S_i_R)  # unique i indices of the remaining
             unq_j_R = torch.unique(S_j_R)  # unique j indices of the remaining            
@@ -123,7 +119,8 @@ def get_gamma_dash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts, 
             idx_in_c2 = tmp_idx.clone()
             idx_in_c2[unq_j_R] = aranged[:unq_j_R.shape[0]]
 
-            grd = fixed_grd[S_i_R, S_j_R] + 2*lda*(r2[idx_in_r2[S_i_R]] + c2[idx_in_c2[S_j_R]])
+            grd = fixed_grd[S_i_R, S_j_R] + 2*lda*(r2[idx_in_r2[S_i_R]] +
+                                                   c2[idx_in_c2[S_j_R]])
             if lda3:
                 grd += lda3*postprocess_gamma(gamma, S_i[:k], S_j[:k], m, n)[S_i_R, S_j_R]
 
@@ -256,7 +253,8 @@ def get_gamma_sdash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts,
             idx_in_c2 = tmp_idx.clone()
             idx_in_c2[unq_j_R] = aranged[:unq_j_R.shape[0]]
 
-            grd = fixed_grd[S_i_R, S_j_R] + 2*lda*(r2[idx_in_r2[S_i_R]] + c2[idx_in_c2[S_j_R]])
+            grd = fixed_grd[S_i_R, S_j_R] + 2*lda*(r2[idx_in_r2[S_i_R]] +
+                                                   c2[idx_in_c2[S_j_R]])
             if lda3:
                 grd += lda3*postprocess_gamma(gamma, S_i[:k], S_j[:k], m, n)[S_i_R, S_j_R]
 
@@ -271,8 +269,12 @@ def get_gamma_sdash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts,
         S_i_S = S_i[:k+1]
         S_j_S = S_j[:k+1]
 
+        # list of current support points over which OT is computed
+
+        # update the remaining elements
         index = torch.where(V_minus_L != chosen)[0]
         V_minus_L = V_minus_L[index]
+        # NOTE: u_0 is chosen from R so we need to infer its index first.
 
         # get step-size based on the support points
         unq_i = torch.unique(S_i_S)
@@ -341,7 +343,6 @@ def get_gamma_sdash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts,
         return gammas if all_gamma else gamma, S_i_S, S_j_S, all_obj, all_nrm
     return gammas if all_gamma else gamma, S_i_S, S_j_S
 
-
 def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts, verbose, conv_crit, seed, tol):
     """
     Implements Sparse-OT-Dash algorithm with warm-start.
@@ -377,7 +378,7 @@ def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpart
             S_j_R = V_minus_L % n
 
             unq_i_R = torch.unique(S_i_R)  # unique i indices of the remaining
-            unq_j_R = torch.unique(S_j_R)  # unique j indices of the remaining            
+            unq_j_R = torch.unique(S_j_R)  # unique j indices of the remaining
             gamma1, gammaT1 = get_marginals(gamma, S_i[:k], S_j[:k], m, n)
             r2 = torch.mv(G1[unq_i_R], gamma1)
             c2 = torch.mv(G2[unq_j_R], gammaT1)
@@ -388,12 +389,14 @@ def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpart
             idx_in_c2 = tmp_idx.clone()
             idx_in_c2[unq_j_R] = aranged[:unq_j_R.shape[0]]
 
-            grd = fixed_grd[S_i_R, S_j_R] + 2*lda*(r2[idx_in_r2[S_i_R]] + c2[idx_in_c2[S_j_R]])
+            grd = fixed_grd[S_i_R, S_j_R] + 2*lda*(r2[idx_in_r2[S_i_R]] +
+                                                   c2[idx_in_c2[S_j_R]])
             if lda3:
                 grd += lda3*postprocess_gamma(gamma, S_i[:k], S_j[:k], m, n)[S_i_R, S_j_R]
 
             u_0 = torch.argmin(grd)
 
+        # get the new element based on the chosen index & include
         chosen = V_minus_L[u_0]
         S_i[k] = torch.div(chosen, n, rounding_mode='floor')
         S_j[k] = chosen % n
@@ -401,6 +404,7 @@ def get_gamma_dash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpart
         S_i_S = S_i[:k+1]
         S_j_S = S_j[:k+1]
 
+        # update the remaining elements
         V_minus_L = torch.cat([V_minus_L[:u_0], V_minus_L[u_0+1:]])
 
         # get step-size based on the support points
@@ -510,7 +514,7 @@ def get_gamma_sdash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpar
             S_j_R = R % n
 
             unq_i_R = torch.unique(S_i_R)  # unique i indices of the remaining
-            unq_j_R = torch.unique(S_j_R)  # unique j indices of the remaining            
+            unq_j_R = torch.unique(S_j_R)  # unique j indices of the remaining
             gamma1, gammaT1 = get_marginals(gamma, S_i[:k], S_j[:k], m, n)
             r2 = torch.mv(G1[unq_i_R], gamma1)
             c2 = torch.mv(G2[unq_j_R], gammaT1)
@@ -521,7 +525,8 @@ def get_gamma_sdash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpar
             idx_in_c2 = tmp_idx.clone()
             idx_in_c2[unq_j_R] = aranged[:unq_j_R.shape[0]]
             
-            grd = fixed_grd[S_i_R, S_j_R] + 2*lda*(r2[idx_in_r2[S_i_R]] + c2[idx_in_c2[S_j_R]])
+            grd = fixed_grd[S_i_R, S_j_R] + 2*lda*(r2[idx_in_r2[S_i_R]] +
+                                                   c2[idx_in_c2[S_j_R]])
             if lda3:
                 grd += lda3*postprocess_gamma(gamma, S_i[:k], S_j[:k], m, n)[S_i_R, S_j_R]
 
@@ -536,10 +541,13 @@ def get_gamma_sdash_ws(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vpar
         S_i_S = S_i[:k+1]
         S_j_S = S_j[:k+1]
 
+        # update the remaining elements
         index = torch.where(V_minus_L != chosen)[0]
         V_minus_L = V_minus_L[index]
+        # NOTE: u_0 is chosen from R so we need to infer its index first.
 
         # get step-size based on the support points
+        # upd unique, upd ss
         unq_i = torch.unique(S_i_S)
         unq_j = torch.unique(S_j_S)
         G1_ss = G1[unq_i, :][:, unq_i]

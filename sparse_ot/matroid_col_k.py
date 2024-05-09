@@ -1,3 +1,7 @@
+"""
+This code implements the ColSparse UOT algorithm.. 
+"""
+
 import torch
 import numpy as np
 from torch import sqrt
