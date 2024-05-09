@@ -6,13 +6,13 @@ Code for our ICML '24 paper, "Submodular framework for structured-sparse optimal
 - $K$: Cardinality constraint.
 
 ## Implementation of Algorithms
-1. *GenSparse UOT* (general sparsity constraint):
+1. *GenSparse UOT*, general sparsity constraint:
     - [Implementation](https://github.com/Piyushi-0/Sparse-UOT/blob/main/sparse_ot/sparse_repr_autok.py) when $K$ unspecified.
     - [Implementation](https://github.com/Piyushi-0/Sparse-UOT/blob/main/sparse_ot/sparse_repr.py) when $K$ specified.
 > [!NOTE]
 > While our experiments use the vector representation of $\gamma$, we also provide implementation with $\gamma$ as a matrix: (i) [code](https://github.com/Piyushi-0/Sparse-UOT/blob/main/sparse_ot/full_repr_autok.py) when $K$ unspecified, (ii) [code](https://github.com/Piyushi-0/Sparse-UOT/blob/main/sparse_ot/full_repr.py) when $K$ specified.
 
-2. *ColSparse UOT* (column-wise sparsity constraint): [Implementation](https://github.com/Piyushi-0/Sparse-UOT/blob/main/sparse_ot/matroid_col_k.py).
+2. *ColSparse UOT*, column-wise sparsity constraint: [Implementation](https://github.com/Piyushi-0/Sparse-UOT/blob/main/sparse_ot/matroid_col_k.py).
 #### Demo Usage
 - [Gen-Sparse UOT with Gaussians](https://github.com/Piyushi-0/Sparse-UOT/blob/main/examples/Gaussian/sparse_repr.ipynb) (vector representation).
 
@@ -20,6 +20,6 @@ Code for our ICML '24 paper, "Submodular framework for structured-sparse optimal
 
 - [CS-UOT with Gaussians](https://github.com/Piyushi-0/Sparse-UOT/blob/main/examples/Gaussian/matroid_col_k.ipynb).
 > [!TIP]
-> 'ws' in the function names signify warm start, where we use the last outer iterate's $\gamma$. We found that a warm start results in faster optimization.
+> 'ws' in the function names signifies warm start, where we use the previous outer iteration's $\gamma$. We found that a warm start results in faster optimization.
 
 *If you find this useful, consider giving a* ⭐ *to this repository.*
