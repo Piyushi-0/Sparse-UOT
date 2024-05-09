@@ -6,13 +6,13 @@ Code for our ICML '24 paper, "Submodular framework for structured-sparse optimal
 - $K$: Cardinality constraint.
 
 ## Implementation of Algorithms
-1. *Gen-Sparse UOT* (general sparsity constraint):
+1. *GenSparse UOT* (general sparsity constraint):
     - [Implementation](./sparse_ot/sparse_repr_autok.py) when $K$ unspecified.
     - [Implementation](./sparse_ot/sparse_repr.py) when $K$ specified.
 > [!NOTE]
 > While our experiments use the vector representation of $\gamma$, we also provide implementation with $\gamma$ as a matrix: (i) [code](./sparse_ot/full_repr_autok.py) when $K$ unspecified, (ii) [code](./sparse_ot/full_repr.py) when $K$ specified.
 
-2. *CS-UOT* (column-wise sparsity constraint): [Implementation](./sparse_ot/matroid_col_k.py).
+2. *ColSparse UOT* (column-wise sparsity constraint): [Implementation](./sparse_ot/matroid_col_k.py).
 #### Demo Usage
 - [Gen-Sparse UOT with Gaussians](./examples/Gaussian/sparse_repr.ipynb) (vector representation).
 
