@@ -1,9 +1,9 @@
 """
-This code implements the stochastic K-sparse-OT algorithm with full
+This code implements the (stochastic) GenSparseUOT algorithm with full
 representations ie. gamma is of size m x n.
 
-- get_gamma: Returns the sparse OT plan gamma of dimension m x n.
-
+Elements are added as long as there is a positive marginal gain 
+(equivalently computed in terms of gradients).
 """
 
 

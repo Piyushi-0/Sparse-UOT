@@ -1,8 +1,8 @@
 """
 This code implements the (stochastic) GenSparse UOT algorithm with
-sparse representations ie. gamma and its gradient are of size K. 
+sparse representations ie. gamma is defined only over its support. 
 
-Elements are added until there is a positive marginal gain 
+Elements are added as long as there is a positive marginal gain 
 (equivalently computed in terms of gradients).
 """
 
