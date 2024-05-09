@@ -6,20 +6,19 @@ Code for our ICML '24 paper, "Submodular framework for structured-sparse optimal
 - $K$: Cardinality constraint.
 
 ## Implementation of Algorithms
-- **Gen-Sparse UOT** (General sparsity constraint)
-    - Case: $K$ unspecified. [Code](./sparse_ot/sparse_repr_autok.py)
-    - Case: $K$ specified. [Code](./sparse_ot/sparse_repr.py)
+1. *Gen-Sparse UOT* (general sparsity constraint):
+    - [Implementation](./sparse_ot/sparse_repr_autok.py) when $K$ unspecified.
+    - [Implementation](./sparse_ot/sparse_repr.py) when $K$ specified.
 > [!NOTE]
-> While our experiments use the vector representation of $\gamma$, we have also provided implementation with $\gamma$ as a matrix: (i) [code](./sparse_ot/full_repr_autok.py) when $K$ unspecified, (ii) [code](./sparse_ot/full_repr.py) when $K$ specified.
+> While our experiments use the vector representation of $\gamma$, we also provide implementation with $\gamma$ as a matrix: (i) [code](./sparse_ot/full_repr_autok.py) when $K$ unspecified, (ii) [code](./sparse_ot/full_repr.py) when $K$ specified.
 
-- [**CS-UOT**](./sparse_ot/matroid_col_k.py) (Column-wise sparsity constraint)
-
+2. *CS-UOT* (column-wise sparsity constraint): [Implementation](./sparse_ot/matroid_col_k.py).
 #### Demo Usage
-[Gen-Sparse UOT with Gaussians](./examples/Gaussian/sparse_repr.ipynb) (vector representation).
+- [Gen-Sparse UOT with Gaussians](./examples/Gaussian/sparse_repr.ipynb) (vector representation).
 
-[Gen-Sparse UOT with Gaussians](./examples/Gaussian/full_repr.ipynb) (matrix representation).
+- [Gen-Sparse UOT with Gaussians](./examples/Gaussian/full_repr.ipynb) (matrix representation).
 
-[CS-UOT with Gaussians](./examples/Gaussian/matroid_col_k.ipynb)
+- [CS-UOT with Gaussians](./examples/Gaussian/matroid_col_k.ipynb).
 > [!TIP]
 > 'ws' in the function names signify warm start, where we use the last outer iterate's $\gamma$. We found that warm start results in faster optimization.
 
