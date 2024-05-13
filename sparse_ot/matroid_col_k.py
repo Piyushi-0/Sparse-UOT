@@ -101,9 +101,9 @@ def get_gamma_dash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts, 
     if verbose:
         print(chosen.item(), u_chosen_i.item(), u_chosen_j.item())
     
-    if grd_crit and fixed_grd[u_chosen_i, u_chosen_j]>=0:
-        return [gamma0[:1]] if all_gamma else gamma0[:1], S_i[:1], S_j[:1]
-    
+    if grd_crit:
+        raise NotImplementedError
+
     all_obj = {}
     all_nrm = {}
     for k in range(tot):
@@ -137,8 +137,8 @@ def get_gamma_dash(C, G1, G2, v1, v2, max_itr, K, lda, lda3, all_gamma, vparts, 
             if verbose:
                 print(chosen.item(), u_chosen_i.item(), u_chosen_j.item())
             
-            if grd_crit and grd[u_chosen_i, u_chosen_j]>=0:
-                break
+            if grd_crit:
+                raise NotImplementedError
             
         S_i[k] = u_chosen_i
         S_j[k] = u_chosen_j
