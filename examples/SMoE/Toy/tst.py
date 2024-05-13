@@ -36,14 +36,8 @@ method = args.method
 num_pts = args.num_pts
 data_x = args.data_x + str(num_pts)
 
-if "single" in method:
-    from single import *
-elif "topk" in method:
+if "topk" in method:
     from smoe_k import *
-elif "init_moe" in method:
-    from init_moe import *
-elif "ours_init" in method:
-    from ours_init_moe import *
 else:
     from smoe import *
 
