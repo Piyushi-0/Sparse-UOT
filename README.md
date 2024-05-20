@@ -1,7 +1,9 @@
 # Sparse-UOT
 Code for our ICML '24 paper, "Submodular framework for structured-sparse optimal transport".
 
-*Notations:*
+To install the 'sparse_ot' package, please clone this repository & run `pip install .`. The list of packages specific to the experiments has been shared separately in their respective folders (under examples/).
+
+Notations:
 - $\gamma$: Optimal Transport plan
 - $K$: Cardinality constraint.
 
