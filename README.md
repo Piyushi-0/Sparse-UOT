@@ -24,7 +24,6 @@ Notations:
 - [GenSparse UOT](https://github.com/Piyushi-0/Sparse-UOT/blob/main/examples/Gaussian/full_repr.ipynb) (matrix representation).
 - [CS-UOT](https://github.com/Piyushi-0/Sparse-UOT/blob/main/examples/Gaussian/matroid_col_k.ipynb).
 
-## Codes for Experiments
-[TBA]
+Codes for the experiments are under 'examples/'.
 
 *If you find this useful, consider giving a* ⭐ *to this repository.*
