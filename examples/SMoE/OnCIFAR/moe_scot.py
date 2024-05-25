@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 import utils
 import torchvision.models as torchmodels
-import resnet
+import resnet, mobilenet
 from utils import get_config
 
 from torch.optim.optimizer import Optimizer, required
@@ -247,7 +247,7 @@ class MoCNN(nn.Module):
         return output, select0, loss, embed, mask_count
 
 class NonlinearMixtureMobile(nn.Module):
-    def __init__(self, expert_num, gamma, strategy='top1', max_iter=25, v=None, ktype=None, khp=None, lda3=None):
+    def __init__(self, expert_num, gamma, strategy='top1', max_iter=5, v=None, ktype=None, khp=None, lda3=None):
         super(NonlinearMixtureMobile, self).__init__()
         self.router = Router(3, expert_num, strategy=strategy)
         self.models = nn.ModuleList()
@@ -268,6 +268,7 @@ class NonlinearMixtureMobile(nn.Module):
         with torch.no_grad():
             m, n = select.shape
             C = -select_softmax.T.detach().cpu().numpy()
+            C = C/np.abs(C).max()
             # arange = torch.arange(m, device=torch.device('cuda'), dtype=torch.int64)
             
             expected_num_tokens_per_expert = float(m) / float(n)
@@ -323,9 +324,10 @@ class NonlinearMixtureMobile(nn.Module):
 
 
 class NonlinearMixtureRes(nn.Module):
-    def __init__(self, expert_num, gamma, strategy='top1', max_iter=25, v=None, ktype=None, khp=None, lda3=None):
+    def __init__(self, expert_num, gamma, strategy='top1', max_iter=5, v=None, ktype=None, khp=None, lda3=None):
         super(NonlinearMixtureRes, self).__init__()
         self.router = Router(3, expert_num, strategy=strategy)
+        print("resnet")
         self.models = nn.ModuleList()
         for i in range(expert_num):
             self.models.append(resnet.ResNet18()) 

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 import utils
 import torchvision.models as torchmodels
-import resnet
+import resnet, mobilenet
 
 from torch.optim.optimizer import Optimizer, required
 from torch.optim import _functional
@@ -189,7 +189,7 @@ class NonlinearMixtureMobile(nn.Module):
 
         density = mask.mean(dim=-2)
         density_proxy = select.mean(dim=-2)
-        loss = (density_proxy * density).mean() * float(self.expert_num ** 2)
+        loss = (density_proxy * density).mean()* float(self.expert_num ** 2)
 
         mask_count = mask.sum(dim=-2, keepdim=True)
         mask_flat = mask.sum(dim=-1)
@@ -237,7 +237,7 @@ class NonlinearMixtureRes(nn.Module):
 
         density = mask.mean(dim=-2)
         density_proxy = select.mean(dim=-2)
-        loss = (density_proxy * density).mean() * float(self.expert_num ** 2)
+        loss = (density_proxy * density).max() * float(self.expert_num ** 2) #* 2
 
         mask_count = mask.sum(dim=-2, keepdim=True)
         mask_flat = mask.sum(dim=-1)

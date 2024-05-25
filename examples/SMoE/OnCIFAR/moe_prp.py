@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 import utils
 import torchvision.models as torchmodels
-import resnet
+import resnet, mobilenet
 from utils import get_config
 
 from sparse_ot.matroid_col_k import get_gamma
@@ -264,7 +264,7 @@ class NonlinearMixtureMobile(nn.Module):
 
 
 class NonlinearMixtureRes(nn.Module):
-    def __init__(self, expert_num, gamma, strategy='top1', max_iter=25, v=1, ktype=None, khp=None, lda3=1):
+    def __init__(self, expert_num, gamma, strategy='top1', max_iter=5, v=1, ktype=None, khp=None, lda3=1):
         super(NonlinearMixtureRes, self).__init__()
         self.router = Router(3, expert_num, strategy=strategy)
         self.models = nn.ModuleList()

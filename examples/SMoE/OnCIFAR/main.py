@@ -49,7 +49,7 @@ CLUSTER_NUM = config['clusters']
 strategy = config['strategy']
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--epochs', type=int, default=30)
+parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--model', default='resnet18')
 parser.add_argument('--gamma', default=0.1, type=float)
 parser.add_argument('--mixture', default=True)
@@ -63,27 +63,16 @@ parser.add_argument('--resume', '-r', action='store_true',
 parser.add_argument('--save_as', default='prp')
 args = parser.parse_args()
 
-save_as = args.save_as + str(args.gamma) + str(args.model)
+save_as = args.save_as
 
 if 'scot' in save_as:
     import moe_scot as moe
 elif 'prp' in save_as:
     import moe_prp as moe
-    save_as += args.ktype + str(args.khp) + str(args.lda3)
-# elif 'ot' in save_as:
-#     import moe_ot as moe
-# elif 'uotkl' in save_as:
-#     import moe_uotkl as moe
-#     save_as += str(args.lda3)
-# elif 'uotmmd' in save_as:
-#     import moe_uotmmd as moe
-#     save_as += args.ktype + str(args.khp) + str(args.lda3)
-# elif 'ssot' in save_as:
-#     import moe_ssot as moe
 elif 'topk' in save_as or 'single' in save_as:
     import moe
 
-log_fldr = "LOGS"
+log_fldr = f"Logs_{args.epochs}"
 
 if args.test:
     log_fldr += "_test_"
@@ -256,9 +245,9 @@ def test(epoch):
             'optimizer1': optimizers[1].state_dict(),
             'scheduler': scheduler.state_dict()
         }
-        if not os.path.isdir('checkpoint'):
-            os.mkdir('checkpoint')
-        torch.save(state, './checkpoint/ckpt.pth')
+        if not os.path.isdir(f'{save_as}/checkpoint'):
+            os.makedirs(f'{save_as}/checkpoint')
+        torch.save(state, f'{save_as}/checkpoint/ckpt.pth')
         best_acc = acc
 
 if args.mixture:
@@ -267,7 +256,7 @@ if args.mixture:
             net = moe.NonlinearMixtureMobile(EXPERT_NUM, gamma=args.gamma, strategy=strategy, v=args.v, ktype=args.ktype, khp=args.khp, lda3=args.lda3).to(device)
         else:
             net = moe.NonlinearMixtureRes(EXPERT_NUM, gamma=args.gamma, strategy=strategy, v=args.v, ktype=args.ktype, khp=args.khp, lda3=args.lda3).to(device)
-    else: # NOTE: due to the above typo, we report MobileNet's result for topk.
+    else: # NOTE: DUE TO THE ABOVE MISMATCH, WHILE RUNNING SCOT, PROPOSED, WE PASS MobileNetV2.
         if 'resnet' in args.model:
             net = moe.NonlinearMixtureRes(EXPERT_NUM, strategy=strategy).to(device)
         else:
