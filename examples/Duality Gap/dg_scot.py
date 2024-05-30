@@ -1,9 +1,8 @@
 import torch
 import numpy as np
-from torch.linalg import norm
-from sparse_ot.utils import postprocess_gamma, createLogHandler, get_dist, get_G
-from sparse_ot.matroid_col_k import get_gamma
-from sparse_ot.utils import conj_lda3, get_dualobj_lda3, get_primal, get_dualsol_lda3
+from scipy.optimize import minimize
+from ot.smooth import SparsityConstrained
+from sparse_ot.utils import conj_lda3, createLogHandler, get_dist, get_G, get_primal
 import os
 import torchvision
 import torchvision.transforms as transforms
@@ -15,6 +14,7 @@ parser.add_argument('--ktype', type=str, default='rbf', help='kernel type')
 parser.add_argument('--lda', type=float, default=1.0, help='regularization parameter')
 parser.add_argument('--lda3', type=float, default=1.0, help='quad regularization parameter')
 parser.add_argument('--K', type=int, default=4)
+parser.add_argument('--max_itr', type=int, default=1000)
 parser.add_argument('--save_as')
 args = parser.parse_args()
 
@@ -23,9 +23,9 @@ ktype = args.ktype
 lda = args.lda
 lda3 = args.lda3
 K = args.K
-device = torch.device("cuda")
+max_itr = args.max_itr
 os.makedirs(args.save_as, exist_ok=True)
-logger = createLogHandler(f'{args.save_as}/our_inv.csv', str(os.getpid()))
+logger = createLogHandler(f'{args.save_as}/other_inv_{max_itr}.csv', str(os.getpid()))
 
 def seed_everything(seed=0):
     import random
@@ -36,14 +36,6 @@ def seed_everything(seed=0):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
-def dual_obj(alpha, beta, a, b, C, G_inv, lmbda, max_nz):
-    lda = lmbda[1]
-    lda3 = lmbda[3]
-    X = alpha[:, None] + beta - C
-    obj = alpha.dot(a) + beta.dot(b) - torch.mv(G_inv[1], alpha).dot(alpha)/(4*lda) - \
-        torch.mv(G_inv[2], beta).dot(beta)/(4*lda) - conj_lda3(X, max_nz, lda3)
-    return obj
 
 seed_everything(0)
 
@@ -62,32 +54,89 @@ for i, (x_i, _) in enumerate(trainloader):
         y = x_i
         break
 
-x = x.view(x.shape[0], -1).to(device)
-y = y.view(y.shape[0], -1).to(device)
+x = x.view(x.shape[0], -1)
+y = y.view(y.shape[0], -1)
 
-C = get_dist(x, y)
-C = C/torch.max(C)
-m, n = C.shape
+Ct = get_dist(x, y)
+Ct = Ct/torch.max(Ct)
+m, n = Ct.shape
 
 G1 = get_G(x=x, y=x, khp=khp, ktype=ktype)
 G2 = get_G(x=y, y=y, khp=khp, ktype=ktype)
 G = {1: G1, 2: G2}
+
 G_inv = {1: torch.linalg.inv(G1), 2: torch.linalg.inv(G2)}
+
+C = Ct.cpu().numpy()
+G_inv = {1: G_inv[1].cpu().numpy(), 2: G_inv[2].cpu().numpy()}
+a = np.ones(G1.shape[0], dtype=np.float32)/G1.shape[0]
+b = np.ones(G2.shape[0], dtype=np.float32)/G2.shape[0]
 
 cn1 = torch.linalg.cond(G1)
 cn2 = torch.linalg.cond(G2)
 
-v1 = torch.ones(G1.shape[0], device=C.device)/G1.shape[0]
-v2 = torch.ones(G2.shape[0], device=C.device)/G2.shape[0]
-max_itr = 1000
+def dual_obj(alpha, beta, a, b, C, G_inv, lmbda, max_nz):
+    lda = lmbda[1]
+    lda3 = lmbda[3]
+    X = alpha[:, None] + beta - C
+    obj = alpha.dot(a) + beta.dot(b) - torch.mv(G_inv[1], alpha).dot(alpha)/(4*lda) - \
+        torch.mv(G_inv[2], beta).dot(beta)/(4*lda) - conj_lda3(X, max_nz, lda3)
+    
+    bottom_k = torch.topk(X, X.shape[0]-max_nz, dim=0, largest=False).indices
+    X_new = torch.scatter(X, 0, bottom_k, 0.0)/lda3  # X.scatter_(0, bottom_k, 0.0)/lda3
+    gamma = torch.clamp(X_new, min=0)
+    return obj, gamma
 
-gamma, S_i_S, S_j_S = get_gamma(C, G1, G2, v1, v2, max_itr, K, lda, lda3)
-sol_primal = postprocess_gamma(gamma, S_i_S, S_j_S, m, n)
-gamma1 = sol_primal.sum(1)
-gammaT1 = sol_primal.sum(0)
-obj_primal = get_primal(sol_primal, v1, v2, C, G, lda, lda3)
+def dual_obj_grad(alpha, beta, a, b, C, G_inv, lmbda, regul=None, max_nz=1):
+    if regul is None:
+        regul = SparsityConstrained(max_nz, lmbda[3])
+    
+    obj = np.dot(alpha, a) + np.dot(beta, b) - (G_inv[1]@alpha).dot(alpha)/(4*lmbda[1]) - (G_inv[2]@beta).dot(beta)/(4*lmbda[2])
 
-sol_dual_our = get_dualsol_lda3(v1, v2, G, lda, gamma1=gamma1, gammaT1=gammaT1)
-obj_dual = dual_obj(sol_dual_our["alpha"], sol_dual_our["beta"], v1, v2, C, G_inv, {1: lda, 3: lda3}, K)  # get_dualobj_lda3(sol_dual_our, v1, v2, C, G, lda, lda3, K, gamma1=gamma1, gammaT1=gammaT1)
+    grad_alpha = a.copy() - G_inv[1]@alpha/(2*lmbda[1])
+    grad_beta = b.copy() - G_inv[2]@beta/(2*lmbda[2])
+    
+    X = alpha[:, np.newaxis] + beta - C
+    
+    val, G = regul.delta_Omega(X)
+    
+    obj -= np.sum(val)
+    grad_alpha -= G.sum(axis=1)
+    grad_beta -= G.sum(axis=0)
+    
+    return obj, grad_alpha, grad_beta, G
+    
 
-logger.info(f"{obj_primal}, {obj_dual}, {obj_primal-obj_dual}, {cn1}, {cn2}, {khp}, {ktype}, {lda}, {lda3}, {K}")
+def solve_dual(a, b, C, G_inv, lmbda, max_nz, regul=None, method="L-BFGS-B", tol=1e-3, max_iter=500, verbose=False):
+    # regul: Regularization obj. Should implement delta_Omega(X).
+    def _func(params):
+        alpha = params[:len(a)]
+        beta = params[len(a):]
+        
+        obj, grad_alpha, grad_beta, _ = dual_obj_grad(alpha, beta, a, b, C, G_inv, lmbda, regul, max_nz)
+        grad = np.concatenate((grad_alpha, grad_beta))
+        return -obj, -grad
+    # as minimize allows vector only so concatenating
+    alpha_init = np.zeros_like(a)
+    beta_init = np.zeros_like(b)
+    params_init = np.concatenate((alpha_init, beta_init))
+    
+    res = minimize(_func, params_init, method=method, jac=True,
+                   tol=tol, options=dict(maxiter=max_iter, disp=verbose))
+    alpha = res.x[:len(a)]
+    beta = res.x[len(a):]
+    return alpha, beta, res
+
+alpha, beta, res = solve_dual(a, b, C, G_inv, {1: lda, 2: lda, 3: lda3}, K, max_iter=max_itr)
+obj_dual = -res.fun
+
+X = torch.from_numpy(alpha[:, None] + beta - C)
+bottom_k = torch.topk(X, X.shape[0]-K, dim=0, largest=False).indices
+X.scatter_(0, bottom_k, 0.0)
+gamma = torch.clamp(X, min=0).float() # primal solution
+a = torch.from_numpy(a).float()
+b = torch.from_numpy(b).float()
+
+obj_primal = get_primal(gamma, a, b, Ct, G, lda, lda3)
+
+logger.info(f"{max_itr}, {obj_primal}, {obj_dual}, {obj_primal-obj_dual}, {cn1}, {cn2}, {khp}, {ktype}, {lda}, {lda3}, {K}")
