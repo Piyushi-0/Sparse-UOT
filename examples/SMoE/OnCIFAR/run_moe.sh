@@ -1,3 +1,3 @@
 #!/bin/sh
 export CUDA_VISIBLE_DEVICES=1
-python main.py --save_as TOPK
+python main.py --save_as topk_FINAL
