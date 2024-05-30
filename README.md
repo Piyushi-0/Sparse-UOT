@@ -20,8 +20,7 @@ Notations:
 > 'ws' in the function names signifies warm start, where we use the previous outer iteration's $\gamma$. We found that a warm start results in faster optimization.
 
 *Toy example with Gaussians*:
-- [GenSparse UOT](https://github.com/Piyushi-0/Sparse-UOT/blob/main/examples/Gaussian/sparse_repr.ipynb) (vector representation).
-- [GenSparse UOT](https://github.com/Piyushi-0/Sparse-UOT/blob/main/examples/Gaussian/full_repr.ipynb) (matrix representation).
+- [GenSparse UOT Supplementary](https://github.com/Piyushi-0/Sparse-UOT/blob/main/examples/Gaussian/Gaussian_Supplementary.ipynb).
 - [CS-UOT](https://github.com/Piyushi-0/Sparse-UOT/blob/main/examples/Gaussian/matroid_col_k.ipynb).
 
 Codes for the experiments are under 'examples/'.
