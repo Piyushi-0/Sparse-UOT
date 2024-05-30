@@ -8,8 +8,8 @@ do
                 do
                     for ktype in rbf imq imq_v2
                     do
-                    python dg_our.py --khp $khp --ktype $ktype --lda $lda --lda3 $lda3 --K $K --save_as May27_Hcn
-                    python dg_other_inv.py --khp $khp --ktype $ktype --lda $lda --lda3 $lda3 --K $K --save_as May27_Hcn
+                    python dg_proposed.py --khp $khp --ktype $ktype --lda $lda --lda3 $lda3 --K $K --save_as May27_Hcn
+                    python dg_scot.py --khp $khp --ktype $ktype --lda $lda --lda3 $lda3 --K $K --save_as May27_Hcn
                     done
                 done
             done
