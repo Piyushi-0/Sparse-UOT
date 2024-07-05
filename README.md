@@ -1,5 +1,5 @@
 # Sparse-UOT
-Code for our ICML '24 paper, [Submodular Framework for Structured-Sparse Optimal Transport](https://arxiv.org/pdf/2406.04914).
+Code for our ICML '24 paper, [Submodular Framework for Structured-Sparse Optimal Transport](https://arxiv.org/pdf/2406.04914), [Poster](https://drive.google.com/file/d/1SMZwiUO4tkVR5oMaMYLap92xlhD3_b_D/view?usp=sharing).
 
 To install the 'sparse_ot' package, please clone this repository & run `pip install .`. The list of packages specific to the experiments has been shared separately in their respective folders (under examples/).
 
@@ -25,4 +25,4 @@ Notations:
 
 Codes for the experiments are under 'examples/'.
 
-*If you find this useful, consider giving a* ⭐ *to this repository.*
+*If you find this useful, consider giving a* ⭐ *to this repository* and citing our work.
